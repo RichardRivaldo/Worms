@@ -30,25 +30,47 @@ public class Bot {
                 .get();
     }
 
+    private Worm getEnemyWorm(GameState gameState){
+        return Arrays.stream(opponent.worms)
+                .filter(worm -> worm.health > 0)
+                .findFirst()
+                .get();
+    }
+
     public Command run(){
         Worm enemyWorm = getFirstWormInRange();
 
         if(enemyWorm != null){
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-
-            if(isValidCoordinate(direction.x, direction.y)){
-                if (currentWorm.id == 2 && currentWorm.banana.count > 0) {
-                    return new BananaBomb(enemyWorm.position);
+            if (currentWorm.id == 2 && currentWorm.bananas.count > 0){
+                return new BananaBomb(enemyWorm.position);
+            }
+            else if (currentWorm.id == 3 && currentWorm.snowballs.count > 0){
+                boolean foundFrozen = false;
+                int i = 0;
+                while(i < 3 && !foundFrozen){
+                    if(opponent.worms[i].notFrozen != 0){
+                        foundFrozen = true;
+                    }
+                    i++;
                 }
-                else if (currentWorm.id == 3 && currentWorm.snowballs.count > 0) {
-                    return new Snowball(enemyWorm.position);
-                }
-                else{
+                if(foundFrozen){
                     return new ShootCommand(direction);
                 }
+                else{
+                    return new Snowball(enemyWorm.position);
+                }
+            }
+            else{
+                return new ShootCommand(direction);
             }
         }
+        else{
+            return digAndMove(currentWorm);
+        }
+    }
 
+    private Command digAndMove(Worm currentWorm){
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
 
@@ -66,7 +88,7 @@ public class Bot {
                     return new MoveCommand(blockNotDS.x, blockNotDS.y);
                 }
                 else if(blockNotDS.type == CellType.DIRT){
-                    return new MoveCommand(blockNotDS.x, blockNotDS.y);
+                    return new DigCommand(blockNotDS.x, blockNotDS.y);
                 }
             }
         }
