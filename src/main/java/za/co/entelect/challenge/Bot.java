@@ -38,10 +38,16 @@ public class Bot {
     }
 
     public Command run(){
-        Worm enemyWorm = getFirstWormInRange();
+        Worm enemyWorm = getFirstWormInRange(4);
+        Worm enemyBananaSnowball = getFirstWormInRange(5);
 
-        if(enemyWorm != null){
+        if((enemyWorm != null || enemyBananaSnowball != null)){
+            if(enemyWorm == null){
+                enemyWorm = enemyBananaSnowball;
+            }
+
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
+
             if (currentWorm.id == 2 && currentWorm.bananas.count > 0){
                 return new BananaBomb(enemyWorm.position);
             }
@@ -66,6 +72,8 @@ public class Bot {
             }
         }
         else{
+            Worm enemy = opponent.worms[random.nextInt(3)];
+            Direction dir = resolveDirection(currentWorm.position, enemy.position);
             return digAndMove(currentWorm);
         }
     }
@@ -107,9 +115,9 @@ public class Bot {
         return new DoNothingCommand();
     }
 
-    private Worm getFirstWormInRange() {
+    private Worm getFirstWormInRange(int range) {
 
-        Set<String> cells = constructFireDirectionLines(currentWorm.weapon.range)
+        Set<String> cells = constructFireDirectionLines(range)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(cell -> String.format("%d_%d", cell.x, cell.y))
