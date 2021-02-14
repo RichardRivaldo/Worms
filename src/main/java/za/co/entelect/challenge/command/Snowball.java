@@ -1,16 +1,15 @@
 package za.co.entelect.challenge.command;
 
-import za.co.entelect.challenge.entities.Position;
-
 public class Snowball implements Command{
-    private Position position;
+    private final int x;
+    private final int y;
 
-    public Snowball(Position position){
-        this.position = position;
+    public Snowball(int x, int y) {
+        this.x = x;
+        this.y = y;
     }
-
     @Override
     public String render(){
-        return String.format("snowball %d %d", position.x, position.y);
+        return String.format("snowball %d %d", x, y);
     }
 }

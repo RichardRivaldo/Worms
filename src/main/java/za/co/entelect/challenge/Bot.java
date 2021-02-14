@@ -38,9 +38,47 @@ public class Bot {
     }
 
     public Command run(){
-        Worm enemyWorm = getFirstWormInRange(4);
-        Worm enemyBananaSnowball = getFirstWormInRange(5);
+        Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range);
+        Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5);
 
+        // self Defense another Worm
+        if (gameState.myPlayer.remainingWormSelections>0) {
+            for (MyWorm another : gameState.myPlayer.worms) {
+                if (another.id == gameState.currentWormId) continue;
+                if (another.health > 0) {
+                    Worm enemy = getFirstWormInRange(another, another.weapon.range);
+                    Worm enemySpecial = getFirstWormInRange(another, 5);
+                    if((enemy != null || enemySpecial != null)){
+                        if(enemy == null){
+                            enemy = enemySpecial;
+                        }
+                        Direction direction = resolveDirection(another.position, enemy.position);
+                        if (another.id == 2 && another.bananas.count > 0) {
+                            return new SelectCommand(another.id, null, enemySpecial.position.x, enemySpecial.position.y, false, true, false, false, false);
+                        } else if (another.id == 3 && another.snowballs.count > 0) {
+                            boolean foundFrozen = false;
+                            int i = 0;
+                            while (i < 3 && !foundFrozen) {
+                                if (opponent.worms[i].notFrozen != 0) {
+                                    return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
+                                }
+                                i++;
+                            }
+                            if (foundFrozen) {
+                                return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
+                            } else {
+                                return new SelectCommand(another.id, null, enemySpecial.position.x, enemySpecial.position.y, true, false, false, false, false);
+                            }
+                        } else {
+                            return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        // Self Defense currentWorm
         if((enemyWorm != null || enemyBananaSnowball != null)){
             if(enemyWorm == null){
                 enemyWorm = enemyBananaSnowball;
@@ -49,7 +87,7 @@ public class Bot {
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
 
             if (currentWorm.id == 2 && currentWorm.bananas.count > 0){
-                return new BananaBomb(enemyWorm.position);
+                return new BananaBomb(enemyWorm.position.x, enemyWorm.position.y);
             }
             else if (currentWorm.id == 3 && currentWorm.snowballs.count > 0){
                 boolean foundFrozen = false;
@@ -64,7 +102,7 @@ public class Bot {
                     return new ShootCommand(direction);
                 }
                 else{
-                    return new Snowball(enemyWorm.position);
+                    return new Snowball(enemyWorm.position.x, enemyWorm.position.y);
                 }
             }
             else{
@@ -115,9 +153,9 @@ public class Bot {
         return new DoNothingCommand();
     }
 
-    private Worm getFirstWormInRange(int range) {
+    private Worm getFirstWormInRange(MyWorm current, int range) {
 
-        Set<String> cells = constructFireDirectionLines(range)
+        Set<String> cells = constructFireDirectionLines(current, range)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(cell -> String.format("%d_%d", cell.x, cell.y))
@@ -133,20 +171,20 @@ public class Bot {
         return null;
     }
 
-    private List<List<Cell>> constructFireDirectionLines(int range) {
+    private List<List<Cell>> constructFireDirectionLines(MyWorm current, int range) {
         List<List<Cell>> directionLines = new ArrayList<>();
         for (Direction direction : Direction.values()) {
             List<Cell> directionLine = new ArrayList<>();
             for (int directionMultiplier = 1; directionMultiplier <= range; directionMultiplier++) {
-
-                int coordinateX = currentWorm.position.x + (directionMultiplier * direction.x);
-                int coordinateY = currentWorm.position.y + (directionMultiplier * direction.y);
+                
+                int coordinateX = current.position.x + (directionMultiplier * direction.x);
+                int coordinateY = current.position.y + (directionMultiplier * direction.y);
 
                 if (!isValidCoordinate(coordinateX, coordinateY)) {
                     break;
                 }
 
-                if (euclideanDistance(currentWorm.position.x, currentWorm.position.y, coordinateX, coordinateY) > range) {
+                if (euclideanDistance(current.position.x, current.position.y, coordinateX, coordinateY) > range) {
                     break;
                 }
 
