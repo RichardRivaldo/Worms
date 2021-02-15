@@ -2,6 +2,7 @@ package za.co.entelect.challenge.entities;
 
 import com.google.gson.annotations.SerializedName;
 
+// New Bananas Class to contain banana attribute for worms
 public class Bananas {
     @SerializedName("damage")
     public int damage;

@@ -1,6 +1,6 @@
 package za.co.entelect.challenge.command;
 
-
+// New Command Class to do BananaBombs
 public class BananaBomb implements Command{
     private final int x;
     private final int y;

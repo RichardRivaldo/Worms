@@ -15,6 +15,8 @@ public class MyPlayer {
     @SerializedName("worms")
     public MyWorm[] worms;
 
+    // Added Remaining Select Command Count for My Worms
+    // Attribute is provided from JSON files
     @SerializedName("remainingWormSelections")
     public int remainingWormSelections;
 }

@@ -1,5 +1,6 @@
 package za.co.entelect.challenge.command;
 
+// New Command Class to do Snowballs
 public class Snowball implements Command{
     private final int x;
     private final int y;

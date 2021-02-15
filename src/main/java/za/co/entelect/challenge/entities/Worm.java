@@ -18,6 +18,8 @@ public class Worm {
     @SerializedName("movementRange")
     public int movementRange;
 
+    // Added Round Countdown for frozen worms
+    // Attribute is provided from JSON files
     @SerializedName("roundsUntilUnfrozen")
     public int notFrozen;
 }

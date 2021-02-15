@@ -30,6 +30,7 @@ public class Bot {
                 .get();
     }
 
+    // Added function to get an alive enemy worm
     private Worm getEnemyWorm(GameState gameState){
         return Arrays.stream(opponent.worms)
                 .filter(worm -> worm.health > 0)
@@ -38,8 +39,10 @@ public class Bot {
     }
 
     public Command run(){
-        Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range);
-        Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5);
+
+        // Get enemy worms in:
+        Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range); // Weapon Range
+        Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5); // Snowball and Banana Range
 
         // self Defense another Worm
         if (gameState.myPlayer.remainingWormSelections>0) {
@@ -78,18 +81,37 @@ public class Bot {
         }
 
 
-        // Self Defense currentWorm
+        // Attack Strategy
+
+        // Check if any enemy is in range
         if((enemyWorm != null || enemyBananaSnowball != null)){
             if(enemyWorm == null){
+                // Maximizing Detection Range and Ability
+                // Weapon Range < Banana or Snowball Range
+                // Detected enemy on Banana or Snowball range first
+                // Set enemyWorm as enemyBananaSnowball
                 enemyWorm = enemyBananaSnowball;
             }
 
+            // Find direction between my worm and enemy's worm
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
 
+            // Shooting Strategy
+            // Maximizing Damage and Utility
+            // Check my worm id first before deciding
+            // Also check inventory for special trained attacks -> Banana or Snowball
             if (currentWorm.id == 2 && currentWorm.bananas.count > 0){
+                // Maximizing Damage
+                // Worm = Agent
+                // Can Use Banana
                 return new BananaBomb(enemyWorm.position.x, enemyWorm.position.y);
             }
             else if (currentWorm.id == 3 && currentWorm.snowballs.count > 0){
+                // Maximizing Utility
+                // Worm = Technologist
+                // Can Use Snowball
+
+                // Detect if any enemy's worm is frozen
                 boolean foundFrozen = false;
                 int i = 0;
                 while(i < 3 && !foundFrozen){
@@ -99,35 +121,53 @@ public class Bot {
                     i++;
                 }
                 if(foundFrozen){
+                    // Maximizing Freeze Duration between each snowball used
+                    // One or more enemy's worm is frozen
+                    // Do ordinary shoot before using another snowball
                     return new ShootCommand(direction);
                 }
                 else{
+                    // No enemy frozen -> If missed snowball or before finding any enemies
+                    // Use snowball to freeze enemies
                     return new Snowball(enemyWorm.position.x, enemyWorm.position.y);
                 }
             }
             else{
+                // Worm = Commando, Agent, Technologist
+                // No Banana for Agent
+                // No Snowball for Technologist
+                // Still do shoot command as many as possible to maximize damage output
                 return new ShootCommand(direction);
             }
         }
         else{
+            // Movement code here
             Worm enemy = opponent.worms[random.nextInt(3)];
             Direction dir = resolveDirection(currentWorm.position, enemy.position);
             return digAndMove(currentWorm);
         }
     }
 
+    // Move Intuition Idea
     private Command digAndMove(Worm currentWorm){
+        // Get surrounding cells of current wormr
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
 
+        // Choose random block cells
         Cell block = surroundingBlocks.get(cellIdx);
+
+        // Check cell type
         if (block.type == CellType.DIRT) {
+            // Dig if dirt
             return new DigCommand(block.x, block.y);
         }
         else if (block.type == CellType.AIR) {
+            // Move if air
             return new MoveCommand(block.x, block.y);
         }
         else if (block.type == CellType.DEEP_SPACE){
+            // Find other cell if deep space
             Cell blockNotDS = surroundingBlocks.get(cellIdx);
             if(blockNotDS.type != CellType.DEEP_SPACE){
                 if(blockNotDS.type != CellType.DIRT || blockNotDS.type == CellType.AIR){
@@ -139,6 +179,7 @@ public class Bot {
             }
         }
         else{
+            // Find other cell if lava
             Cell block1 = surroundingBlocks.get(cellIdx);
             if(block1.type == CellType.LAVA) {
                 Cell block2 = surroundingBlocks.get(cellIdx);
@@ -153,8 +194,10 @@ public class Bot {
         return new DoNothingCommand();
     }
 
+    // Modified getFirstWormInRange
+    // Receive current worm + max range to detect enemies
     private Worm getFirstWormInRange(MyWorm current, int range) {
-
+        // Use the range and current worm
         Set<String> cells = constructFireDirectionLines(current, range)
                 .stream()
                 .flatMap(Collection::stream)
