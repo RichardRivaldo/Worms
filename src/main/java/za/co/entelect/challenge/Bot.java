@@ -141,21 +141,79 @@ public class Bot {
             }
         }
         else{
-            // Movement code here
-            Worm enemy = opponent.worms[random.nextInt(3)];
-            Direction dir = resolveDirection(currentWorm.position, enemy.position);
-            return digAndMove(currentWorm);
+            Worm shortestEnemy = huntClosestEnemy(currentWorm);
+            Direction dir = resolveDirection(currentWorm.position, shortestEnemy.position);
+            return digAndMove(currentWorm, dir);
         }
     }
 
+//    private Worm findClosestFriend(Worm currentWorm){
+//        int currRange = 99999;
+//        int range;
+//        Worm nearestFriend = gameState.myPlayer.worms[0];
+//        for(Worm friend : gameState.myPlayer.worms){
+//            if((friend.health > 0) && (friend.id != currentWorm.id)){
+//                range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, friend.position.x, friend.position.y);
+//                if(range < currRange){
+//                    nearestFriend = friend;
+//                    currRange = range;
+//                }
+//            }
+//        }
+//        return nearestFriend;
+//    }
+
+    private Worm findClosestFriend(Worm currentWorm){
+        int currRange = 99999;
+        int range;
+        Worm nearestFriend = gameState.myPlayer.worms[0];
+        for(Worm friend : gameState.myPlayer.worms){
+            if((friend.health > 0) && (friend.id != currentWorm.id)){
+                range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, friend.position.x, friend.position.y);
+                if(range < currRange){
+                    nearestFriend = friend;
+                    currRange = range;
+                }
+            }
+        }
+        return nearestFriend;
+    }
+
+    private Worm huntClosestEnemy(Worm currentWorm){
+        int currRange = 99999;
+        int range;
+        Worm nearestEnemy = opponent.worms[0];
+        for(Worm enemy : opponent.worms){
+            if(enemy.health > 0){
+                range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemy.position.x, enemy.position.y);
+                if(range < currRange){
+                    nearestEnemy = enemy;
+                    currRange = range;
+                }
+            }
+        }
+        return nearestEnemy;
+    }
+
     // Move Intuition Idea
-    private Command digAndMove(Worm currentWorm){
-        // Get surrounding cells of current wormr
+    private Command digAndMove(Worm currentWorm, Direction direction){
+        // New coordinate
+        int newX = currentWorm.position.x + direction.x;
+        int newY = currentWorm.position.y + direction.y;
+
+        // Get surrounding cells of current worms
         List<Cell> surroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
         int cellIdx = random.nextInt(surroundingBlocks.size());
 
-        // Choose random block cells
-        Cell block = surroundingBlocks.get(cellIdx);
+        // Initialize block cell
+        Cell block = surroundingBlocks.get(0);
+
+        // Find a block with the same coordinate to check
+        for(Cell Blocks : surroundingBlocks){
+            if(Blocks.x == newX && Blocks.y == newY){
+                block = Blocks;
+            }
+        }
 
         // Check cell type
         if (block.type == CellType.DIRT) {
