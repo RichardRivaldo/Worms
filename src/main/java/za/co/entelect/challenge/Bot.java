@@ -40,16 +40,14 @@ public class Bot {
 
     public Command run(){
         // Get enemy worms in:
-        Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range); // Weapon Range
-        Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5); // Snowball and Banana Range
+        Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range, false); // Weapon Range
+        Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5, true); // Snowball and Banana Range
 
         if(gameState.PUpCount > 0){
             // Temporary Code
             // Idea -> go to center of the map
             // To raise possibility to get power up
-            Position PowerUp = currentWorm.position;
-            PowerUp.x = 17;
-            PowerUp.y = 17;
+            Position PowerUp = getPowerupCell();
             Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
             return digAndMove(currentWorm, toPowerUp);
         }
@@ -66,47 +64,43 @@ public class Bot {
                 if (another.id == gameState.currentWormId) continue;
                 if (another.health > 0) {
                     // Get enemy worms in:
-                    Worm enemy = getFirstWormInRange(another, another.weapon.range); // Weapon Range
-                    Worm enemySpecial = getFirstWormInRange(another, 5); // Snowball and Banana Range
+                    Worm enemy = getFirstWormInRange(another, another.weapon.range,false); // Weapon Range
+                    Worm enemySpecial = getFirstWormInRange(another, 5,true); // Snowball and Banana Range
 
                     // Check if any enemy is in range
                     // Also check if health is > 0 to avoid shooting dead enemies
                     if((enemy != null || enemySpecial != null)){
-                        if(enemy == null){
-                            // Maximizing Detection Range and Ability
-                            // Weapon Range < Banana or Snowball Range
-                            // Detected enemy on Banana or Snowball range first
-                            // Set enemyWorm as enemyBananaSnowball
-                            enemy = enemySpecial;
-                        }
                         // Get Distance
                         // Only need to get CW to ES
-                        float distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemySpecial.position.x, enemySpecial.position.y);
-
-                        // Resolve Direction
-                        Direction direction = resolveDirection(another.position, enemy.position);
+                        float distCWtoEBS=0;
+                        Direction direction=null;
+                        if (enemy!=null) {
+                            distCWtoEBS = euclideanDistance(another.position.x, another.position.y, enemy.position.x, enemy.position.y);
+                            // Resolve Direction
+                            direction = resolveDirection(another.position, enemy.position);
+                        }
 
                         // Do Attack Strategies
                         // Same intuitive with AttackCommand, but with Select Command
-                        if (another.id == 2 && another.bananas.count > 0) {
+                        if (enemySpecial != null && another.id == 2 && another.bananas.count > 0) {
                             // Worm = Agent
                             // Can Banana
                             return new SelectCommand(another.id, null, enemySpecial.position.x, enemySpecial.position.y, false, true, false, false, false);
                         }
-                        else if (another.id == 3 && another.snowballs.count > 0) {
+                        else if (enemySpecial != null && another.id == 3 && another.snowballs.count > 0) {
                             // Worm = Technologist
                             // Can Snowball
 
-                            // Maximizing Freeze Duration
+                            // Detect if any enemy's worm is frozen
                             boolean foundFrozen = false;
                             int i = 0;
                             while (i < 3 && !foundFrozen) {
                                 if (opponent.worms[i].notFrozen != 0) {
-                                    return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
+                                    foundFrozen = true;
                                 }
                                 i++;
                             }
-                            if (foundFrozen) {
+                            if (enemy != null && foundFrozen) {
                                 return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
                             }
                             else {
@@ -115,7 +109,7 @@ public class Bot {
                         }
                         // Ordinary Shoot Command with Select Command
                         // Check distance first so not out of range
-                        else if(distCWtoEBS <= currentWorm.weapon.range){
+                        else if(enemy != null && distCWtoEBS <= currentWorm.weapon.range){
                             // Worms = All
                             // Can't Banana or Snowball
                             return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
@@ -128,29 +122,26 @@ public class Bot {
         // Check if any enemy is in range
         // Also check if health is > 0 to avoid shooting dead enemies
         if((enemyWorm != null || enemyBananaSnowball != null)) {
-            if (enemyWorm == null) {
-                // Maximizing Detection Range and Ability
-                // Weapon Range < Banana or Snowball Range
-                // Detected enemy on Banana or Snowball range first
-                // Set enemyWorm as enemyBananaSnowball
-                enemyWorm = enemyBananaSnowball;
+            float distCWtoEBS=0;
+            Direction direction=null;
+            if (enemyWorm!=null) {
+                // Get Distance
+                // Only need to get CW to ES
+                distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemyWorm.position.x, enemyWorm.position.y);
+                // Find direction between my worm and enemy's worm
+                direction = resolveDirection(currentWorm.position, enemyWorm.position);
             }
-            float distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
-
-            // Find direction between my worm and enemy's worm
-            Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
-
             // Shooting Strategy
             // Maximizing Damage and Utility
             // Check my worm id first before deciding
             // Also check inventory for special trained attacks -> Banana or Snowball
-            if (currentWorm.id == 2 && currentWorm.bananas.count > 0) {
+            if (enemyBananaSnowball != null && currentWorm.id == 2 && currentWorm.bananas.count > 0) {
                 // Maximizing Damage
                 // Worm = Agent
                 // Can Use Banana
-                return new BananaBomb(enemyWorm.position.x, enemyWorm.position.y);
+                return new BananaBomb(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
             }
-            else if (currentWorm.id == 3 && currentWorm.snowballs.count > 0) {
+            else if (enemyBananaSnowball != null && currentWorm.id == 3 && currentWorm.snowballs.count > 0) {
                 // Maximizing Utility
                 // Worm = Technologist
                 // Can Use Snowball
@@ -164,7 +155,7 @@ public class Bot {
                     }
                     i++;
                 }
-                if (foundFrozen) {
+                if (enemyWorm != null && foundFrozen) {
                     // Maximizing Freeze Duration between each snowball used
                     // One or more enemy's worm is frozen
                     // Do ordinary shoot before using another snowball
@@ -173,12 +164,12 @@ public class Bot {
                 else {
                     // No enemy frozen -> If missed snowball or before finding any enemies
                     // Use snowball to freeze enemies
-                    return new Snowball(enemyWorm.position.x, enemyWorm.position.y);
+                    return new Snowball(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
                 }
             }
             // Get Distance
             // Only need to get CW to EBS
-            else if(distCWtoEBS <= currentWorm.weapon.range){
+            else if(enemyWorm != null &&distCWtoEBS <= currentWorm.weapon.range){
                 // Worm = Commando, Agent, Technologist
                 // No Banana for Agent
                 // No Snowball for Technologist
@@ -231,23 +222,24 @@ public class Bot {
         return result;
     }
 
-    /*    private Position getPowerupCell(){
-            // Random Init
-            Position pospUp = currentWorm.position;
+    private Position getPowerupCell(){
+        // Random Init
+        Position pospUp=null;
+        pospUp.x=17;
+        pospUp.y=17;
 
-            // Check each cells
-            for (int i = 0; i < gameState.mapSize; i++) {
-                for (int j = 0; j < gameState.mapSize; j++) {
-                    // Don't include the current position
-                    if (isValidCoordinate(i, j) && gameState.map[i][j] != null){
-                        pospUp.x = gameState.map[i][j].x;
-                        pospUp.y = gameState.map[i][j].y;
-                        return pospUp;
-                    }
+        // Check each cells
+        for (int i = 0; i < gameState.mapSize; i++) {
+            for (int j = 0; j < gameState.mapSize; j++) {
+                // Don't include the current position
+                if (isValidCoordinate(i, j) && gameState.map[i][j].powerUp.type == PowerUpType.HEALTH_PACK){
+                    pospUp.x = gameState.map[i][j].x;
+                    pospUp.y = gameState.map[i][j].y;
                 }
             }
-            return null;
-        }*/
+        }
+        return pospUp;
+    }
 
     // Move Intuition Idea
     public Command digAndMove(Worm currentWorm, Direction dir){
@@ -308,9 +300,9 @@ public class Bot {
 
     // Modified getFirstWormInRange
     // Receive current worm + max range to detect enemies
-    private Worm getFirstWormInRange(MyWorm current, int range) {
+    private Worm getFirstWormInRange(MyWorm current, int range, Boolean specialMove) {
         // Use the range and current worm
-        Set<String> cells = constructFireDirectionLines(current, range)
+        Set<String> cells = constructFireDirectionLines(current, range, specialMove)
                 .stream()
                 .flatMap(Collection::stream)
                 .map(cell -> String.format("%d_%d", cell.x, cell.y))
@@ -330,7 +322,7 @@ public class Bot {
         return null;
     }
 
-    private List<List<Cell>> constructFireDirectionLines(MyWorm current, int range) {
+    private List<List<Cell>> constructFireDirectionLines(MyWorm current, int range, Boolean specialMove) {
         List<List<Cell>> directionLines = new ArrayList<>();
         for (Direction direction : Direction.values()) {
             List<Cell> directionLine = new ArrayList<>();
@@ -348,10 +340,16 @@ public class Bot {
                 }
 
                 Cell cell = gameState.map[coordinateY][coordinateX];
-                if (cell.type != CellType.AIR) {
-                    break;
+                if (specialMove) {
+                    if (!(cell.type == CellType.AIR|| cell.type == CellType.DIRT)) {
+                        break;
+                    }
                 }
-
+                else {
+                    if (cell.type != CellType.AIR) {
+                        break;
+                    }
+                }
                 directionLine.add(cell);
             }
             directionLines.add(directionLine);
