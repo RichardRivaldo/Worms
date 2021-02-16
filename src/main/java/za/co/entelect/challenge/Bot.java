@@ -4,6 +4,7 @@ import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
 import za.co.entelect.challenge.enums.CellType;
 import za.co.entelect.challenge.enums.Direction;
+import za.co.entelect.challenge.enums.PowerUpType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +43,17 @@ public class Bot {
         Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range); // Weapon Range
         Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5); // Snowball and Banana Range
 
+        if(gameState.PUpCount > 0){
+            // Temporary Code
+            // Idea -> go to center of the map
+            // To raise possibility to get power up
+            Position PowerUp = currentWorm.position;
+            PowerUp.x = 17;
+            PowerUp.y = 17;
+            Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
+            return digAndMove(currentWorm, toPowerUp);
+        }
+
         return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
     }
 
@@ -67,6 +79,9 @@ public class Bot {
                             // Set enemyWorm as enemyBananaSnowball
                             enemy = enemySpecial;
                         }
+                        // Get Distance
+                        // Only need to get CW to ES
+                        float distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemySpecial.position.x, enemySpecial.position.y);
 
                         // Resolve Direction
                         Direction direction = resolveDirection(another.position, enemy.position);
@@ -99,7 +114,8 @@ public class Bot {
                             }
                         }
                         // Ordinary Shoot Command with Select Command
-                        else {
+                        // Check distance first so not out of range
+                        else if(distCWtoEBS <= currentWorm.weapon.range){
                             // Worms = All
                             // Can't Banana or Snowball
                             return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
@@ -119,6 +135,7 @@ public class Bot {
                 // Set enemyWorm as enemyBananaSnowball
                 enemyWorm = enemyBananaSnowball;
             }
+            float distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
 
             // Find direction between my worm and enemy's worm
             Direction direction = resolveDirection(currentWorm.position, enemyWorm.position);
@@ -159,7 +176,9 @@ public class Bot {
                     return new Snowball(enemyWorm.position.x, enemyWorm.position.y);
                 }
             }
-            else {
+            // Get Distance
+            // Only need to get CW to EBS
+            else if(distCWtoEBS <= currentWorm.weapon.range){
                 // Worm = Commando, Agent, Technologist
                 // No Banana for Agent
                 // No Snowball for Technologist
@@ -167,8 +186,8 @@ public class Bot {
                 return new ShootCommand(direction);
             }
         }
-
         // Movement
+        // Got here
         Worm closest = getClosestEnemies(currentWorm);
         Direction toClosest = resolveDirection(currentWorm.position, closest.position);
         return digAndMove(currentWorm, toClosest);
@@ -177,8 +196,8 @@ public class Bot {
     // Function to get closest worm friends
     private Worm getClosestFriend(Worm currentWorm){
         // Init
-        int currRange = 99999;
-        int range;
+        float currRange = 99999;
+        float range;
         Worm nearestFriend = gameState.myPlayer.worms[0];
 
         // Check and Assign
@@ -197,8 +216,8 @@ public class Bot {
     // Function to get closest enemy worm
     private Worm getClosestEnemies(Worm currentWorm){
         // Init
-        int minRange = 99999;
-        int Range;
+        float minRange = 99999;
+        float Range;
         Worm result = opponent.worms[0];
 
         // Check and Assign
@@ -212,6 +231,24 @@ public class Bot {
         return result;
     }
 
+    /*    private Position getPowerupCell(){
+            // Random Init
+            Position pospUp = currentWorm.position;
+
+            // Check each cells
+            for (int i = 0; i < gameState.mapSize; i++) {
+                for (int j = 0; j < gameState.mapSize; j++) {
+                    // Don't include the current position
+                    if (isValidCoordinate(i, j) && gameState.map[i][j] != null){
+                        pospUp.x = gameState.map[i][j].x;
+                        pospUp.y = gameState.map[i][j].y;
+                        return pospUp;
+                    }
+                }
+            }
+            return null;
+        }*/
+
     // Move Intuition Idea
     public Command digAndMove(Worm currentWorm, Direction dir){
         // New Coordinate
@@ -223,7 +260,7 @@ public class Bot {
         int cellIdx = random.nextInt(AllSurroundingBlocks.size());
 
         // Random Init
-        Cell block = AllSurroundingBlocks.get(0);
+        Cell block = AllSurroundingBlocks.get(cellIdx);
 
         // Find a block with same coordinate to check
         for(Cell Blocks: AllSurroundingBlocks){
@@ -333,12 +370,12 @@ public class Bot {
                 }
             }
         }
-
         return cells;
     }
 
-    private int euclideanDistance(int aX, int aY, int bX, int bY) {
-        return (int) (Math.sqrt(Math.pow(aX - bX, 2) + Math.pow(aY - bY, 2)));
+    // Modified return type to float to get better precision
+    private float euclideanDistance(int aX, int aY, int bX, int bY) {
+        return (float) (Math.sqrt(Math.pow(aX - bX, 2) + Math.pow(aY - bY, 2)));
     }
 
     private boolean isValidCoordinate(int x, int y) {
