@@ -179,9 +179,33 @@ public class Bot {
         }
         // Movement
         // Got here
-        Worm closest = getClosestEnemies(currentWorm);
-        Direction toClosest = resolveDirection(currentWorm.position, closest.position);
-        return digAndMove(currentWorm, toClosest);
+        Worm commando = findCommando(currentWorm);
+        Worm enemies = getClosestEnemies(currentWorm);
+        if(commando != null && currentWorm.id != 1){ // If the commando worm is alive, the others will follow the commando
+            Direction commandoDirection = resolveDirection(currentWorm.position, commando.position);
+            return digAndMove(currentWorm, commandoDirection);
+        }
+        else if(commando == null && currentWorm.id != 1){ // If the commando worm is dead
+            Worm friends = getClosestFriend(currentWorm);
+            Direction friendDirection = resolveDirection(currentWorm.position, friends.position);
+            return digAndMove(currentWorm, friendDirection);
+        }
+        else { // Commando strategy
+            Direction huntDirection = resolveDirection(currentWorm.position, enemies.position);
+            return digAndMove(currentWorm, huntDirection);
+        }
+    }
+
+    // Function to follow Commando worm
+    private Worm findCommando(Worm currentWorm){
+        Worm commando= null;
+
+        for(Worm friend : gameState.myPlayer.worms){
+            if((friend.id == 1) && (friend.health > 0)){
+                commando = friend;
+            }
+        }
+        return commando;
     }
 
     // Function to get closest worm friends
@@ -189,7 +213,7 @@ public class Bot {
         // Init
         float currRange = 99999;
         float range;
-        Worm nearestFriend = gameState.myPlayer.worms[0];
+        Worm nearestFriend = null;
 
         // Check and Assign
         for(Worm friend : gameState.myPlayer.worms){
