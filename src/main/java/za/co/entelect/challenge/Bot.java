@@ -4,7 +4,6 @@ import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
 import za.co.entelect.challenge.enums.CellType;
 import za.co.entelect.challenge.enums.Direction;
-import za.co.entelect.challenge.enums.PowerUpType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -30,25 +29,21 @@ public class Bot {
                 .get();
     }
 
-    // Added function to get an alive enemy worm
-    private Worm getEnemyWorm(){
-        return Arrays.stream(opponent.worms)
-                .filter(worm -> worm.health > 0)
-                .findFirst()
-                .get();
-    }
-
     public Command run(){
         // Get enemy worms in:
         Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range, false); // Weapon Range
         Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5, true); // Snowball and Banana Range
 
-        if(gameState.PUpCount > 0){
-            // Temporary Code
-            // Idea -> go to center of the map
-            // To raise possibility to get power up
+        // Check if there is any power up available
+        if(getPowerupCell() != null){
+            // Go to nearest power up cells if available
             Position PowerUp = getPowerupCell();
             Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
+
+            // Check if there are enemies found while going to the power up cells
+            if(enemyWorm != null && enemyBananaSnowball != null){
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
+            }
             return digAndMove(currentWorm, toPowerUp);
         }
 
@@ -122,8 +117,8 @@ public class Bot {
         // Check if any enemy is in range
         // Also check if health is > 0 to avoid shooting dead enemies
         if((enemyWorm != null || enemyBananaSnowball != null)) {
-            float distCWtoEBS=0;
-            Direction direction=null;
+            float distCWtoEBS = 0;
+            Direction direction = null;
             if (enemyWorm!=null) {
                 // Get Distance
                 // Only need to get CW to ES
@@ -177,8 +172,6 @@ public class Bot {
                 return new ShootCommand(direction);
             }
         }
-        // Movement
-        // Got here
         Worm commando = findCommando(currentWorm);
         Worm enemies = getClosestEnemies(currentWorm);
         if(commando != null && currentWorm.id != 1){ // If the commando worm is alive, the others will follow the commando
@@ -219,7 +212,7 @@ public class Bot {
         for(Worm friend : gameState.myPlayer.worms){
             if((friend.health > 0) && (friend.id != currentWorm.id)){
                 range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, friend.position.x, friend.position.y);
-                if(range < currRange){
+                if(range <= currRange){
                     nearestFriend = friend;
                     currRange = range;
                 }
@@ -238,7 +231,7 @@ public class Bot {
         // Check and Assign
         for(Worm enemies : opponent.worms){
             Range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemies.position.x, enemies.position.y);
-            if(Range < minRange && enemies.health > 0){
+            if(Range <= minRange && enemies.health > 0){
                 minRange = Range;
                 result = enemies;
             }
@@ -247,22 +240,41 @@ public class Bot {
     }
 
     private Position getPowerupCell(){
-        // Random Init
-        Position pospUp=null;
-        pospUp.x=17;
-        pospUp.y=17;
+        // Init ArrayList of Cell
+        ArrayList<Cell> cells = new ArrayList<>();
 
-        // Check each cells
+        // Add cells in map
         for (int i = 0; i < gameState.mapSize; i++) {
             for (int j = 0; j < gameState.mapSize; j++) {
                 // Don't include the current position
-                if (isValidCoordinate(i, j) && gameState.map[i][j].powerUp.type == PowerUpType.HEALTH_PACK){
-                    pospUp.x = gameState.map[i][j].x;
-                    pospUp.y = gameState.map[i][j].y;
+                if (isValidCoordinate(i, j)) {
+                    cells.add(gameState.map[j][i]);
                 }
             }
         }
-        return pospUp;
+
+        // Random Init
+        Cell pospUp = cells.get(0);
+
+        // Get filtered cells containing Power Up
+        // Else return null
+        List<Cell> ListCellpUp = cells.stream().filter(cell -> cell.powerUp != null).collect(Collectors.toList());
+
+        // Check to determine return
+        float min = 99999;
+        if(ListCellpUp.size() > 0) {
+            for (Cell cell : ListCellpUp) {
+                float range = euclideanDistance(currentWorm.position.x, currentWorm.position.y, cell.x, cell.y);
+                if (range <= min) {
+                    min = range;
+                    pospUp = cell;
+                }
+                // Find power up cell with minimum distance
+                // Return position of that power up cell
+                return new Position(pospUp.x, pospUp.y);
+            }
+        }
+        return null;
     }
 
     // Move Intuition Idea

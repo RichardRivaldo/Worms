@@ -27,8 +27,4 @@ public class GameState {
 
     @SerializedName("map")
     public Cell[][] map;
-
-    // Added new attribute
-    @SerializedName("totalHealthPacks")
-    public int PUpCount;
 }

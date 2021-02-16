@@ -8,4 +8,16 @@ public class Position {
 
     @SerializedName("y")
     public int y;
+
+    // Added Default Constructor
+    public Position(){
+        x = 99;
+        y = 99;
+    }
+
+    // Added User-Defined Constructor
+    public Position(int newx, int newy){
+        x = newx;
+        y = newy;
+    }
 }
