@@ -486,7 +486,20 @@ public class Bot {
             for (int j = y - 1; j <= y + 1; j++) {
                 // Don't include the current position
                 if (i != x && j != y && isValidCoordinate(i, j)) {
-                    cells.add(gameState.map[j][i]);
+                    Boolean theresFriend=false;
+                    for (MyWorm another : gameState.myPlayer.worms) {
+                        // Find another alive worm
+                        if (another.id == gameState.currentWormId) continue;
+                        if (another.health > 0) {
+                            if (another.position.x==gameState.map[i][j].x && another.position.y==gameState.map[i][j].y) {
+                                theresFriend=true;
+                            }
+                        }
+
+                    }
+                    if (!theresFriend) {
+                        cells.add(gameState.map[j][i]);
+                    }
                 }
             }
         }
