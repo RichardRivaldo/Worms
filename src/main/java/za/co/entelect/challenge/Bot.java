@@ -43,7 +43,7 @@ public class Bot {
                     // Get enemy worms in:
                     Worm enemy = getFirstWormInRange(another, another.weapon.range,false); // Weapon Range
                     Worm enemySpecial = getFirstWormInRange(another, 5,true); // Snowball and Banana Range
-                    if (enemy!=null || enemySpecial!=null) {
+                    if (enemy!=null || (enemySpecial!=null &&  another.id == 2 && another.bananas.count > 0) || (enemySpecial!=null &&  another.id == 3 && another.snowballs.count > 0)) {
                         return AttackCommand(another, enemy, enemySpecial, another.id);
                     }
                 }
@@ -56,7 +56,7 @@ public class Bot {
             Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
 
             // Check if there are enemies found while going to the power up cells
-            if(enemyWorm != null || enemyBananaSnowball != null){
+            if(enemyWorm!=null || (enemyBananaSnowball!=null &&  currentWorm.id == 2 && currentWorm.bananas.count > 0) || (enemyBananaSnowball!=null &&  currentWorm.id == 3 && currentWorm.snowballs.count > 0)){
                 return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
             }
             return digAndMove(currentWorm, toPowerUp);
@@ -100,7 +100,7 @@ public class Bot {
                 return lonewolf();
             }
             // if enemy is in range of shoot
-            else if (enemyWorm!=null && enemyBananaSnowball!=null) {
+            else if (enemyWorm!=null || (enemyBananaSnowball!=null &&  currentWorm.id == 2 && currentWorm.bananas.count > 0) || (enemyBananaSnowball!=null &&  currentWorm.id == 3 && currentWorm.snowballs.count > 0)) {
                 return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
             }
             // just random move
@@ -108,7 +108,7 @@ public class Bot {
         }
 
         // if enemy nearby available to attack
-        if((enemyWorm != null || enemyBananaSnowball != null)) {
+        if(enemyWorm!=null || (enemyBananaSnowball!=null &&  currentWorm.id == 2 && currentWorm.bananas.count > 0) || (enemyBananaSnowball!=null &&  currentWorm.id == 3 && currentWorm.snowballs.count > 0)) {
             return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
         }
         // if nothing can maximize strategy follow commander
@@ -507,7 +507,7 @@ public class Bot {
                         }
                     }
                     // Add cells if there is no friend occupying the cell
-                    if (!theresFriend) {
+                    if (!theresFriend && gameState.map[i][j].type!=CellType.LAVA) {
                         cells.add(gameState.map[j][i]);
                     }
                 }
