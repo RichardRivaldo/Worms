@@ -11,8 +11,9 @@ public enum Direction {
     W(-1, 0),
     NW(-1, -1);
 
-    public final int x;
-    public final int y;
+    // Modified into non final attributes
+    public int x;
+    public int y;
 
     Direction(int x, int y) {
         this.x = x;

@@ -50,12 +50,12 @@ public class Bot {
             return lonewolf();
         }
 
-        if(enemyWorm == null && enemyBananaSnowball == null){
+        else if(enemyWorm == null && enemyBananaSnowball == null){
             return following();
         }
 
         // Check if there is any power up available
-        if(getPowerupCell() != null){
+        else if(getPowerupCell() != null){
             // Go to nearest power up cells if available
             Position PowerUp = getPowerupCell();
             Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
@@ -220,7 +220,9 @@ public class Bot {
 
     // Get Center Map
     private Direction getCenterMap(){
-        List<Cell> AllSurroundingBlocks = getSurroundingCells(17,17);
+        // Get surrounding of current worm
+        List<Cell> AllSurroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+
         int cellIdx = random.nextInt(AllSurroundingBlocks.size());
         Cell randomCenterCell = AllSurroundingBlocks.get(cellIdx);
         int x = randomCenterCell.x;
@@ -250,6 +252,7 @@ public class Bot {
 
     // Endgame mechanism
     public Command lonewolf(){
+        // Go to the center of the map
         Direction CellDirection = getCenterMap();
         return digAndMove(currentWorm, CellDirection);
     }
@@ -365,6 +368,21 @@ public class Bot {
         return null;
     }
 
+    // Function to move away from lava blocks
+    private Command reverseAtLava(Cell blockLava){
+        // Get position of lava block
+        Position ofLava = new Position(blockLava.x, blockLava.y);
+
+        // Resolve direction between current worm and lava block
+        Direction reverseLava = resolveDirection(currentWorm.position, ofLava);
+
+        // Go to opposite direction
+        reverseLava.x *= -1;
+        reverseLava.y *= -1;
+
+        return digAndMove(currentWorm, reverseLava);
+    }
+
     // Move Intuition
     public Command digAndMove(Worm currentWorm, Direction dir){
         // New Coordinate
@@ -385,8 +403,12 @@ public class Bot {
             }
         }
 
+        // Find other random surrounding cell if lava
+        if(block.type == CellType.LAVA) {
+            return reverseAtLava(block);
+        }
         // Check cell type
-        if (block.type == CellType.DIRT) {
+        else if(block.type == CellType.DIRT) {
             // Dig if dirt
             return new DigCommand(block.x, block.y);
         }
@@ -407,17 +429,11 @@ public class Bot {
             }
         }
 
-        // Find other random surrounding cell if lava
+        // Random move if all not available
         Cell block1 = AllSurroundingBlocks.get(cellIdx);
-        if(block1.type == CellType.LAVA) {
-            Cell block2 = AllSurroundingBlocks.get(cellIdx);
-            if (block2.type == CellType.AIR) {
-                return new MoveCommand(block2.x, block2.y);
-            } else if (block2.type == CellType.DIRT) {
-                return new DigCommand(block2.x, block2.y);
-            }
-        }
-        return new MoveCommand(block1.x, block1.y);
+        Position ran = new Position(block1.x, block1.y);
+        Direction random = resolveDirection(currentWorm.position, ran);
+        return digAndMove(currentWorm, random);
     }
 
     // Modified getFirstWormInRange
@@ -461,6 +477,7 @@ public class Bot {
                     break;
                 }
 
+                // Do special moves even if there are dirts in shooting line
                 Cell cell = gameState.map[coordinateY][coordinateX];
                 if (specialMove) {
                     if (!(cell.type == CellType.AIR|| cell.type == CellType.DIRT)) {
@@ -495,8 +512,8 @@ public class Bot {
                                 theresFriend=true;
                             }
                         }
-
                     }
+                    // Add cells if there is no friend occupying the cell
                     if (!theresFriend) {
                         cells.add(gameState.map[j][i]);
                     }
