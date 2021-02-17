@@ -33,46 +33,7 @@ public class Bot {
         // Get enemy worms in:
         Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range, false); // Weapon Range
         Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5, true); // Snowball and Banana Range
-
-        if(onevone()){
-            Worm aliveenemy = null;
-
-            for(Worm worm: opponent.worms){
-                if(worm.health > 0){
-                    aliveenemy = worm;
-                }
-            }
-            if(aliveenemy.health > currentWorm.health)
-                return lonewolf();
-        }
-
-        else if(Alone()){
-            return lonewolf();
-        }
-
-        else if(enemyWorm == null && enemyBananaSnowball == null){
-            return following();
-        }
-
-        // Check if there is any power up available
-        else if(getPowerupCell() != null){
-            // Go to nearest power up cells if available
-            Position PowerUp = getPowerupCell();
-            Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
-
-            // Check if there are enemies found while going to the power up cells
-            if(enemyWorm != null || enemyBananaSnowball != null){
-                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
-            }
-            return digAndMove(currentWorm, toPowerUp);
-        }
-
-        return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
-    }
-
-    // Attack Strategy
-    public Command AttackCommand(MyWorm currentWorm, Worm enemyWorm, Worm enemyBananaSnowball){
-        // Self-Defense another worm
+        // Self defense another worm in danger when selection is available
         if (gameState.myPlayer.remainingWormSelections>0) {
             // Iterate over worms
             for (MyWorm another : gameState.myPlayer.worms) {
@@ -82,82 +43,107 @@ public class Bot {
                     // Get enemy worms in:
                     Worm enemy = getFirstWormInRange(another, another.weapon.range,false); // Weapon Range
                     Worm enemySpecial = getFirstWormInRange(another, 5,true); // Snowball and Banana Range
-
-                    // Check if any enemy is in range
-                    // Also check if health is > 0 to avoid shooting dead enemies
-                    if((enemy != null || enemySpecial != null)){
-                        // Get Distance
-                        // Only need to get CW to ES
-                        float distCWtoEBS=0;
-                        Direction direction=null;
-                        if (enemy!=null) {
-                            distCWtoEBS = euclideanDistance(another.position.x, another.position.y, enemy.position.x, enemy.position.y);
-                            // Resolve Direction
-                            direction = resolveDirection(another.position, enemy.position);
-                        }
-
-                        // Do Attack Strategies
-                        // Same intuitive with AttackCommand, but with Select Command
-                        if (enemySpecial != null && another.id == 2 && another.bananas.count > 0) {
-                            // Worm = Agent
-                            // Can Banana
-                            return new SelectCommand(another.id, null, enemySpecial.position.x, enemySpecial.position.y, false, true, false, false, false);
-                        }
-                        else if (enemySpecial != null && another.id == 3 && another.snowballs.count > 0) {
-                            // Worm = Technologist
-                            // Can Snowball
-
-                            // Detect if any enemy's worm is frozen
-                            boolean foundFrozen = false;
-                            int i = 0;
-                            while (i < 3 && !foundFrozen) {
-                                if (opponent.worms[i].notFrozen != 0) {
-                                    foundFrozen = true;
-                                }
-                                i++;
-                            }
-                            if (enemy != null && foundFrozen) {
-                                return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
-                            }
-                            else {
-                                return new SelectCommand(another.id, null, enemySpecial.position.x, enemySpecial.position.y, true, false, false, false, false);
-                            }
-                        }
-                        // Ordinary Shoot Command with Select Command
-                        // Check distance first so not out of range
-                        else if(enemy != null && distCWtoEBS <= currentWorm.weapon.range){
-                            // Worms = All
-                            // Can't Banana or Snowball
-                            return new SelectCommand(another.id, direction, -1, -1, false, false, false, false, true);
-                        }
+                    if (enemy!=null || enemySpecial!=null) {
+                        return AttackCommand(another, enemy, enemySpecial, another.id);
                     }
                 }
             }
         }
+        // Check if there is any power up available
+        if(getPowerupCell() != null){
+            // Go to nearest power up cells if available
+            Position PowerUp = getPowerupCell();
+            Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
 
+            // Check if there are enemies found while going to the power up cells
+            if(enemyWorm != null || enemyBananaSnowball != null){
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+            return digAndMove(currentWorm, toPowerUp);
+        }
+        // Strategy when 1 vs 1
+        if(onevone()){
+            // Check whether currentWorm have special attack
+            if (enemyBananaSnowball!=null && currentWorm.id==2 && currentWorm.bananas.count>0) {
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+            else if (enemyBananaSnowball!=null && currentWorm.id==3 && currentWorm.snowballs.count>0) {
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+            Worm aliveenemy = null;
+
+            for(Worm worm: opponent.worms){
+                if(worm.health > 0){
+                    aliveenemy = worm;
+                }
+            }
+            // if enemy health is higher than current worm just run
+            if(aliveenemy.health > currentWorm.health) {
+                return lonewolf();
+            }
+        }
+        // Strategy when 1 vs everybody
+        else if(Alone()){
+            // Check whether currentWorm have special attack
+            if (enemyBananaSnowball!=null && currentWorm.id==2 && currentWorm.bananas.count>0) {
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+            else if (enemyBananaSnowball!=null && currentWorm.id==3 && currentWorm.snowballs.count>0) {
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+
+            // get closest enemies
+            Worm aliveenemy = getClosestEnemies(currentWorm);
+
+            // if closest enemies health is higher then current worm just run away
+            if (aliveenemy.health>currentWorm.health) {
+                return lonewolf();
+            }
+            // if enemy is in range of shoot
+            else if (enemyWorm!=null && enemyBananaSnowball!=null) {
+                return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+            }
+            // just random move
+            return lonewolf();
+        }
+
+        // if enemy nearby available to attack
+        if((enemyWorm != null || enemyBananaSnowball != null)) {
+            return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
+        }
+        // if nothing can maximize strategy follow commander
+        return following();
+    }
+
+    // Attack Strategy
+    public Command AttackCommand(MyWorm current, Worm enemyWorm, Worm enemyBananaSnowball, int id){
         // Check if any enemy is in range
         // Also check if health is > 0 to avoid shooting dead enemies
-        if((enemyWorm != null || enemyBananaSnowball != null)) {
             float distCWtoEBS = 0;
             Direction direction = null;
             if (enemyWorm!=null) {
                 // Get Distance
                 // Only need to get CW to ES
-                distCWtoEBS = euclideanDistance(currentWorm.position.x, currentWorm.position.y, enemyWorm.position.x, enemyWorm.position.y);
+                distCWtoEBS = euclideanDistance(current.position.x, current.position.y, enemyWorm.position.x, enemyWorm.position.y);
                 // Find direction between my worm and enemy's worm
-                direction = resolveDirection(currentWorm.position, enemyWorm.position);
+                direction = resolveDirection(current.position, enemyWorm.position);
             }
             // Shooting Strategy
             // Maximizing Damage and Utility
             // Check my worm id first before deciding
             // Also check inventory for special trained attacks -> Banana or Snowball
-            if (enemyBananaSnowball != null && currentWorm.id == 2 && currentWorm.bananas.count > 0) {
+            if (enemyBananaSnowball != null && current.id == 2 && current.bananas.count > 0) {
                 // Maximizing Damage
                 // Worm = Agent
                 // Can Use Banana
-                return new BananaBomb(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
+                if (id!=0) {
+                    return new SelectCommand(id, null, enemyBananaSnowball.position.x, enemyBananaSnowball.position.y, false, true, false, false, false);
+                }
+                else {
+                    return new BananaBomb(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
+                }
             }
-            else if (enemyBananaSnowball != null && currentWorm.id == 3 && currentWorm.snowballs.count > 0) {
+            else if (enemyBananaSnowball != null && current.id == 3 && current.snowballs.count > 0) {
                 // Maximizing Utility
                 // Worm = Technologist
                 // Can Use Snowball
@@ -175,25 +161,39 @@ public class Bot {
                     // Maximizing Freeze Duration between each snowball used
                     // One or more enemy's worm is frozen
                     // Do ordinary shoot before using another snowball
-                    return new ShootCommand(direction);
+                    if (id!=0) {
+                        return new SelectCommand(id, direction, -1, -1, false, false, false, false, true);
+                    }
+                    else {
+                        return new ShootCommand(direction);
+                    }
                 }
                 else {
                     // No enemy frozen -> If missed snowball or before finding any enemies
                     // Use snowball to freeze enemies
-                    return new Snowball(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
+                    if (id!=0) {
+                        return new SelectCommand(id, null, enemyBananaSnowball.position.x, enemyBananaSnowball.position.y, true, false, false, false, false);
+                    }
+                    else {
+                        return new Snowball(enemyBananaSnowball.position.x, enemyBananaSnowball.position.y);
+                    }
                 }
             }
             // Get Distance
             // Only need to get CW to EBS
-            else if(enemyWorm != null &&distCWtoEBS <= currentWorm.weapon.range){
+            else if(enemyWorm != null &&distCWtoEBS <= current.weapon.range){
                 // Worm = Commando, Agent, Technologist
                 // No Banana for Agent
                 // No Snowball for Technologist
                 // Still do shoot command as many as possible to maximize damage output
-                return new ShootCommand(direction);
+                if (id!=0) {
+                    return new SelectCommand(id, direction, -1, -1, false, false, false, false, true);
+                }
+                else {
+                    return new ShootCommand(direction);
+                }
             }
-        }
-        return following();
+            return new DoNothingCommand();
     }
 
     // Last worm standing
@@ -273,10 +273,9 @@ public class Bot {
         else if(Alone()){
             return lonewolf();
         }
-        else { // Commando strategy
-            Direction huntDirection = resolveDirection(currentWorm.position, enemies.position);
-            return digAndMove(currentWorm, huntDirection);
-        }
+        // Commando strategy to closest enemies
+        Direction huntDirection = resolveDirection(currentWorm.position, enemies.position);
+        return digAndMove(currentWorm, huntDirection);
     }
 
     // Function to follow Commando worm
@@ -369,18 +368,12 @@ public class Bot {
     }
 
     // Function to move away from lava blocks
-    private Command reverseAtLava(Cell blockLava){
-        // Get position of lava block
-        Position ofLava = new Position(blockLava.x, blockLava.y);
-
-        // Resolve direction between current worm and lava block
-        Direction reverseLava = resolveDirection(currentWorm.position, ofLava);
-
+    private Command reverseAtLava(Worm currentWorm, Direction dir){
         // Go to opposite direction
-        reverseLava.x *= -1;
-        reverseLava.y *= -1;
+        dir.x *= -1;
+        dir.y *= -1;
 
-        return digAndMove(currentWorm, reverseLava);
+        return digAndMove(currentWorm, dir);
     }
 
     // Move Intuition
@@ -405,7 +398,7 @@ public class Bot {
 
         // Find other random surrounding cell if lava
         if(block.type == CellType.LAVA) {
-            return reverseAtLava(block);
+            return reverseAtLava(currentWorm, dir);
         }
         // Check cell type
         else if(block.type == CellType.DIRT) {
