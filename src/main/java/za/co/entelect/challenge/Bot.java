@@ -1,5 +1,6 @@
 package za.co.entelect.challenge;
 
+import javafx.geometry.Pos;
 import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
 import za.co.entelect.challenge.enums.CellType;
@@ -34,6 +35,26 @@ public class Bot {
         Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range, false); // Weapon Range
         Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5, true); // Snowball and Banana Range
 
+        if(onevone()){
+            Worm aliveenemy = null;
+
+            for(Worm worm: opponent.worms){
+                if(worm.health > 0){
+                    aliveenemy = worm;
+                }
+            }
+            if(aliveenemy.health > currentWorm.health)
+                return lonewolf();
+        }
+
+        else if(Alone()){
+            return lonewolf();
+        }
+
+        if(enemyWorm == null && enemyBananaSnowball == null){
+            return following();
+        }
+
         // Check if there is any power up available
         if(getPowerupCell() != null){
             // Go to nearest power up cells if available
@@ -41,7 +62,7 @@ public class Bot {
             Direction toPowerUp = resolveDirection(currentWorm.position, PowerUp);
 
             // Check if there are enemies found while going to the power up cells
-            if(enemyWorm != null && enemyBananaSnowball != null){
+            if(enemyWorm != null || enemyBananaSnowball != null){
                 return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
             }
             return digAndMove(currentWorm, toPowerUp);
@@ -50,6 +71,7 @@ public class Bot {
         return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball);
     }
 
+    // Attack Strategy
     public Command AttackCommand(MyWorm currentWorm, Worm enemyWorm, Worm enemyBananaSnowball){
         // Self-Defense another worm
         if (gameState.myPlayer.remainingWormSelections>0) {
@@ -172,7 +194,65 @@ public class Bot {
                 return new ShootCommand(direction);
             }
         }
-        Worm commando = findCommando(currentWorm);
+        return following();
+    }
+
+    // Last worm standing
+    private Boolean Alone(){
+        int count = 0;
+        for(MyWorm worm: gameState.myPlayer.worms){
+            if(worm.health > 0){
+                count += 1;
+            }
+        }
+        return count == 1;
+    }
+
+    // 1v1 Condition
+    private Boolean onevone(){
+        int count = 0;
+        for(Worm worm: opponent.worms){
+            if(worm.health > 0){
+                count += 1;
+            }
+        }
+        return count == 1 && Alone();
+    }
+
+    // Get Center Map
+    private Direction getCenterMap(){
+        List<Cell> AllSurroundingBlocks = getSurroundingCells(17,17);
+        int cellIdx = random.nextInt(AllSurroundingBlocks.size());
+        Cell randomCenterCell = AllSurroundingBlocks.get(cellIdx);
+        int x = randomCenterCell.x;
+        int y = randomCenterCell.y;
+
+        Position CellPosition = new Position(x, y);
+
+        Boolean occupied = false;
+        for(Worm worm: opponent.worms){
+            if(worm.position.x == CellPosition.x && worm.position.y == CellPosition.y && !occupied){
+                occupied = true;
+            }
+        }
+
+        if(occupied){
+            return getCenterMap();
+        }
+        return resolveDirection(currentWorm.position, CellPosition);
+    }
+
+    // Endgame mechanism
+    public Command lonewolf(){
+        while(true) {
+            Direction CellDirection = getCenterMap();
+            return digAndMove(currentWorm, CellDirection);
+        }
+    }
+
+    // Function to follow another worm
+    public Command following(){
+        Worm commando = findCommando();
         Worm enemies = getClosestEnemies(currentWorm);
         if(commando != null && currentWorm.id != 1){ // If the commando worm is alive, the others will follow the commando
             Direction commandoDirection = resolveDirection(currentWorm.position, commando.position);
@@ -183,6 +263,9 @@ public class Bot {
             Direction friendDirection = resolveDirection(currentWorm.position, friends.position);
             return digAndMove(currentWorm, friendDirection);
         }
+        else if(Alone()){
+            return lonewolf();
+        }
         else { // Commando strategy
             Direction huntDirection = resolveDirection(currentWorm.position, enemies.position);
             return digAndMove(currentWorm, huntDirection);
@@ -190,7 +273,7 @@ public class Bot {
     }
 
     // Function to follow Commando worm
-    private Worm findCommando(Worm currentWorm){
+    private Worm findCommando(){
         Worm commando= null;
 
         for(Worm friend : gameState.myPlayer.worms){
@@ -239,6 +322,7 @@ public class Bot {
         return result;
     }
 
+    // Function to get Power Up Cell
     private Position getPowerupCell(){
         // Init ArrayList of Cell
         ArrayList<Cell> cells = new ArrayList<>();
@@ -277,7 +361,7 @@ public class Bot {
         return null;
     }
 
-    // Move Intuition Idea
+    // Move Intuition
     public Command digAndMove(Worm currentWorm, Direction dir){
         // New Coordinate
         int newX = currentWorm.position.x + dir.x;
@@ -318,20 +402,18 @@ public class Bot {
                 }
             }
         }
-        else{
-            // Find other random surrounding cell if lava
-            Cell block1 = AllSurroundingBlocks.get(cellIdx);
-            if(block1.type == CellType.LAVA) {
-                Cell block2 = AllSurroundingBlocks.get(cellIdx);
-                if(block2.type == CellType.AIR) {
-                    return new MoveCommand(block2.x, block2.y);
-                }
-                else if(block2.type == CellType.DIRT){
-                    return new DigCommand(block2.x, block2.y);
-                }
+
+        // Find other random surrounding cell if lava
+        Cell block1 = AllSurroundingBlocks.get(cellIdx);
+        if(block1.type == CellType.LAVA) {
+            Cell block2 = AllSurroundingBlocks.get(cellIdx);
+            if (block2.type == CellType.AIR) {
+                return new MoveCommand(block2.x, block2.y);
+            } else if (block2.type == CellType.DIRT) {
+                return new DigCommand(block2.x, block2.y);
             }
         }
-        return new DoNothingCommand();
+        return new MoveCommand(block1.x, block1.y);
     }
 
     // Modified getFirstWormInRange
