@@ -83,7 +83,7 @@ public class Bot {
             }
         }
         // Strategy when 1 vs everybody
-        else if(Alone()){
+        if(Alone()){
             // Check whether currentWorm have special attack
             if (enemyBananaSnowball!=null && currentWorm.id==2 && currentWorm.bananas.count>0) {
                 return AttackCommand(currentWorm, enemyWorm, enemyBananaSnowball, 0);
@@ -150,12 +150,10 @@ public class Bot {
 
                 // Detect if any enemy's worm is frozen
                 boolean foundFrozen = false;
-                int i = 0;
-                while (i < 3 && !foundFrozen) {
-                    if (opponent.worms[i].notFrozen != 0) {
+                for (Worm enemies : opponent.worms) {
+                    if (enemies.notFrozen != 0) {
                         foundFrozen = true;
                     }
-                    i++;
                 }
                 if (enemyWorm != null && foundFrozen) {
                     // Maximizing Freeze Duration between each snowball used
@@ -167,6 +165,9 @@ public class Bot {
                     else {
                         return new ShootCommand(direction);
                     }
+                }
+                else if (foundFrozen) {
+                    return lonewolf();
                 }
                 else {
                     // No enemy frozen -> If missed snowball or before finding any enemies
