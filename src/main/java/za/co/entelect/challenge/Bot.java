@@ -1,6 +1,5 @@
 package za.co.entelect.challenge;
 
-import javafx.geometry.Pos;
 import za.co.entelect.challenge.command.*;
 import za.co.entelect.challenge.entities.*;
 import za.co.entelect.challenge.enums.CellType;
@@ -226,8 +225,15 @@ public class Bot {
         Cell randomCenterCell = AllSurroundingBlocks.get(cellIdx);
         int x = randomCenterCell.x;
         int y = randomCenterCell.y;
-
         Position CellPosition = new Position(x, y);
+
+        while(currentWorm.position.x == CellPosition.x && currentWorm.position.y == CellPosition.y){
+            cellIdx = random.nextInt(AllSurroundingBlocks.size());
+            randomCenterCell = AllSurroundingBlocks.get(cellIdx);
+            x = randomCenterCell.x;
+            y = randomCenterCell.y;
+            CellPosition = new Position(x, y);
+        }
 
         Boolean occupied = false;
         for(Worm worm: opponent.worms){
@@ -244,10 +250,8 @@ public class Bot {
 
     // Endgame mechanism
     public Command lonewolf(){
-        while(true) {
-            Direction CellDirection = getCenterMap();
-            return digAndMove(currentWorm, CellDirection);
-        }
+        Direction CellDirection = getCenterMap();
+        return digAndMove(currentWorm, CellDirection);
     }
 
     // Function to follow another worm
