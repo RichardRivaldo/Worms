@@ -54,7 +54,7 @@ public class Bot {
 
         // Follow Commando Worm if it is still alive
         if(findCommando() != null){
-            following();
+            return following();
         }
 
         // Check if there is any power up available
@@ -258,15 +258,6 @@ public class Bot {
         int y = randomCenterCell.y;
         Position CellPosition = new Position(x, y);
 
-        // Check if cell is occupied or not by current worm
-        while(currentWorm.position.x == CellPosition.x && currentWorm.position.y == CellPosition.y){
-            cellIdx = random.nextInt(AllSurroundingBlocks.size());
-            randomCenterCell = AllSurroundingBlocks.get(cellIdx);
-            x = randomCenterCell.x;
-            y = randomCenterCell.y;
-            CellPosition = new Position(x, y);
-        }
-
         // Check if cell is occupied or not by enemy worms
         Boolean occupied = false;
         for(Worm worm: opponent.worms){
@@ -290,7 +281,7 @@ public class Bot {
 
         // Evade enemies' attack
         Direction CellDirection = getRandomMap();
-        while(CellDirection == enemyLines){
+        while(CellDirection == enemyLines || (((CellDirection.x*-1)==enemyLines.x) && ((CellDirection.y*-1)==enemyLines.y))){
             CellDirection = getRandomMap();
         }
         return digAndMove(currentWorm, CellDirection);
@@ -300,7 +291,7 @@ public class Bot {
     public Command following(){
         Worm commando = findCommando();
         Worm enemies = getClosestEnemies(currentWorm);
-        if(commando != null && currentWorm.id != 1){ // If the commando worm is alive, the others will follow the commando
+        if(commando != null && currentWorm.id != 1){ // If the commando worm is alive, the others will follow the commando && current worm not commando
             Direction commandoDirection = resolveDirection(currentWorm.position, commando.position);
             return digAndMove(currentWorm, commandoDirection);
         }
