@@ -33,7 +33,6 @@ public class Bot {
         // Get enemy worms in:
         Worm enemyWorm = getFirstWormInRange(currentWorm, currentWorm.weapon.range, false); // Weapon Range
         Worm enemyBananaSnowball = getFirstWormInRange(currentWorm, 5, true); // Snowball and Banana Range
-
         // Self defense another worm in danger when selection is available
         if (gameState.myPlayer.remainingWormSelections>0) {
             // Iterate over worms
@@ -170,7 +169,7 @@ public class Bot {
             // Detect if any enemy's worm is frozen
             boolean foundFrozen = false;
             for (Worm enemies : opponent.worms) {
-                if (enemies.notFrozen != 0) {
+                if (enemies.health>0 && enemies.notFrozen != 0) {
                     foundFrozen = true;
                 }
             }
@@ -208,6 +207,7 @@ public class Bot {
             // No Banana for Agent
             // No Snowball for Technologist
             // Still do shoot command as many as possible to maximize damage output
+
             if (id!=0) {
                 return new SelectCommand(id, direction, -1, -1, false, false, false, false, true);
             }
@@ -258,13 +258,6 @@ public class Bot {
         int y = randomCenterCell.y;
         Position CellPosition = new Position(x, y);
 
-        while(currentWorm.position.x == CellPosition.x && currentWorm.position.y == CellPosition.y){
-            cellIdx = random.nextInt(AllSurroundingBlocks.size());
-            randomCenterCell = AllSurroundingBlocks.get(cellIdx);
-            x = randomCenterCell.x;
-            y = randomCenterCell.y;
-            CellPosition = new Position(x, y);
-        }
 
         // Check if cell is occupied or not by enemy worms
         Boolean occupied = false;
@@ -276,7 +269,13 @@ public class Bot {
 
         // Recursively try to get another cell if occupied
         if(occupied){
-            return getRandomMap();
+            if (AllSurroundingBlocks.size()<=3) {
+                CellPosition.x=17;
+                CellPosition.y=17;
+            }
+            else {
+                return getRandomMap();
+            }
         }
         // Get direction of the cell
         return resolveDirection(currentWorm.position, CellPosition);
@@ -410,8 +409,50 @@ public class Bot {
         // Go to opposite direction
         dir.x *= -1;
         dir.y *= -1;
+        // New Coordinate
+        int newX = currentWorm.position.x + dir.x;
+        int newY = currentWorm.position.y + dir.y;
 
-        return digAndMove(currentWorm, dir);
+        // Surrounding Cells
+        List<Cell> AllSurroundingBlocks = getSurroundingCells(currentWorm.position.x, currentWorm.position.y);
+        int cellIdx = random.nextInt(AllSurroundingBlocks.size());
+
+        for (Worm enemies: opponent.worms) {
+            while (enemies.health>0 && enemies.position.x==AllSurroundingBlocks.get(cellIdx).x && enemies.position.y==AllSurroundingBlocks.get(cellIdx).y) {
+                cellIdx = random.nextInt(AllSurroundingBlocks.size());
+            }
+        }
+        // Random Init
+        Cell block = AllSurroundingBlocks.get(cellIdx);
+
+        // Find a block with same coordinate to check
+        for(Cell Blocks: AllSurroundingBlocks){
+            if(Blocks.x == newX && Blocks.y == newY){
+                block = Blocks;
+            }
+        }
+
+        if(block.type == CellType.DIRT) {
+            // Dig if dirt
+            return new DigCommand(block.x, block.y);
+        }
+        else if (block.type == CellType.AIR) {
+            // Move if air
+            return new MoveCommand(block.x, block.y);
+        }
+        else if (block.type == CellType.DEEP_SPACE){
+            // Find other random surrounding cell if deep space
+            Cell blockNotDS = AllSurroundingBlocks.get(cellIdx);
+            if(blockNotDS.type != CellType.DEEP_SPACE){
+                if(blockNotDS.type != CellType.DIRT || blockNotDS.type == CellType.AIR){
+                    return new MoveCommand(blockNotDS.x, blockNotDS.y);
+                }
+                else if(blockNotDS.type == CellType.DIRT){
+                    return new DigCommand(blockNotDS.x, blockNotDS.y);
+                }
+            }
+        }
+        return new DoNothingCommand();
     }
 
     // Move Intuition
