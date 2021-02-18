@@ -54,7 +54,7 @@ public class Bot {
 
         // Follow Commando Worm if it is still alive
         if(findCommando() != null){
-            return following();
+            following();
         }
 
         // Check if there is any power up available
@@ -257,6 +257,14 @@ public class Bot {
         int x = randomCenterCell.x;
         int y = randomCenterCell.y;
         Position CellPosition = new Position(x, y);
+
+        while(currentWorm.position.x == CellPosition.x && currentWorm.position.y == CellPosition.y){
+            cellIdx = random.nextInt(AllSurroundingBlocks.size());
+            randomCenterCell = AllSurroundingBlocks.get(cellIdx);
+            x = randomCenterCell.x;
+            y = randomCenterCell.y;
+            CellPosition = new Position(x, y);
+        }
 
         // Check if cell is occupied or not by enemy worms
         Boolean occupied = false;
